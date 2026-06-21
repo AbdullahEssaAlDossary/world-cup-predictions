@@ -4,7 +4,7 @@ const firebaseConfig = {
   projectId: "world-cup-predictions-v2",
   storageBucket: "world-cup-predictions-v2.firebasestorage.app",
   messagingSenderId: "683283790507",
-  appId: "1:683283790507:web:a4efdc0431aac970d415ee"
+  appId: "1:683283790507:web:61ea7cc9bd33bf57d415ee"
 };
 
 firebase.initializeApp(firebaseConfig);
