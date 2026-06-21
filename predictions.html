@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>توقع المباريات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+        .header { background: #1a1a2e; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .header h1 { color: #e94560; font-size: 24px; }
+        .match-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .match-card h3 { color: #1a1a2e; margin-bottom: 10px; }
+        .teams { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 20px; margin: 15px 0; }
+        .score-input { display: flex; justify-content: center; gap: 10px; align-items: center; }
+        .score-input input { width: 50px; padding: 8px; text-align: center; font-size: 18px; border: 2px solid #ccc; border-radius: 5px; }
+        .score-input span { font-size: 20px; font-weight: bold; }
+        button { background: #e94560; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #c73a50; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #1a1a2e; text-decoration: none; }
+        .saved { color: green; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📊 توقع نتائج المباريات</h1>
+        <p>أدخل توقعاتك لكل مباراة</p>
+    </div>
+
+    <div id="matches-container">
+        <p>جاري تحميل المباريات...</p>
+    </div>
+
+    <a href="home.html" class="back-link">⬅ الرجوع للرئيسية</a>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let currentUser = null;
+
+        firebase.auth().onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = user;
+            loadMatches();
+        });
+
+        function loadMatches() {
+            const container = document.getElementById('matches-container');
+            
+            firebase.firestore().collection('matches').orderBy('round').get()
+                .then((snapshot) => {
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p>لا توجد مباريات حالياً</p>';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    snapshot.forEach((doc) => {
+                        const match = doc.data();
+                        const matchDiv = document.createElement('div');
+                        matchDiv.className = 'match-card';
+                        matchDiv.innerHTML = `
+                            <h3>الجولة ${match.round}</h3>
+                            <div class="teams">
+                                <span>${match.team1}</span>
+                                <span>VS</span>
+                                <span>${match.team2}</span>
+                            </div>
+                            <div class="score-input">
+                                <input type="number" id="home-${doc.id}" min="0" max="99" placeholder="0">
+                                <span>-</span>
+                                <input type="number" id="away-${doc.id}" min="0" max="99" placeholder="0">
+                            </div>
+                            <button onclick="savePrediction('${doc.id}')">حفظ التوقع</button>
+                            <p class="saved" id="msg-${doc.id}"></p>
+                        `;
+                        container.appendChild(matchDiv);
+
+                        loadExistingPrediction(doc.id);
+                    });
+                })
+                .catch((error) => {
+                    container.innerHTML = '<p>خطأ في تحميل المباريات</p>';
+                    console.error(error);
+                });
+        }
+
+        function loadExistingPrediction(matchId) {
+            if (!currentUser) return;
+
+            firebase.firestore().collection('predictions')
+                .where('userId', '==', currentUser.uid)
+                .where('matchId', '==', matchId)
+                .get()
+                .then((snapshot) => {
+                    if (!snapshot.empty) {
+                        const pred = snapshot.docs[0].data();
+                        document.getElementById(`home-${matchId}`).value = pred.homeScore;
+                        document.getElementById(`away-${matchId}`).value = pred.awayScore;
+                    }
+                });
+        }
+
+        function savePrediction(matchId) {
+            const homeScore = parseInt(document.getElementById(`home-${matchId}`).value) || 0;
+            const awayScore = parseInt(document.getElementById(`away-${matchId}`).value) || 0;
+
+            if (!currentUser) return;
+
+            const predictionData = {
+                userId: currentUser.uid,
+                matchId: matchId,
+                homeScore: homeScore,
+                awayScore: awayScore,
+                timestamp: new Date()
+            };
+
+            firebase.firestore().collection('predictions')
+                .where('userId', '==', currentUser.uid)
+                .where('matchId', '==', matchId)
+                .get()
+                .then((snapshot) => {
+                    if (snapshot.empty) {
+                        return firebase.firestore().collection('predictions').add(predictionData);
+                    } else {
+                        return firebase.firestore().collection('predictions').doc(snapshot.docs[0].id).update(predictionData);
+                    }
+                })
+                .then(() => {
+                    document.getElementById(`msg-${matchId}`).textContent = '✅ تم حفظ التوقع!';
+                })
+                .catch((error) => {
+                    document.getElementById(`msg-${matchId}`).textContent = '❌ خطأ في الحفظ';
+                    console.error(error);
+                });
+        }
+    </script>
+
+</body>
+</html>
