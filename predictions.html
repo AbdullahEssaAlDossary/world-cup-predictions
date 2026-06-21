@@ -3,145 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع المباريات</title>
+    <title>توقع المباريات - كأس العالم 2026</title>
+    <link rel="stylesheet" href="style.css"> <!-- تأكد أن ملف الستايل بنفس المجلد -->
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-        .header { background: #1a1a2e; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
-        .header h1 { color: #e94560; font-size: 24px; }
-        .match-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .match-card h3 { color: #1a1a2e; margin-bottom: 10px; }
-        .teams { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 20px; margin: 15px 0; }
-        .score-input { display: flex; justify-content: center; gap: 10px; align-items: center; }
-        .score-input input { width: 50px; padding: 8px; text-align: center; font-size: 18px; border: 2px solid #ccc; border-radius: 5px; }
-        .score-input span { font-size: 20px; font-weight: bold; }
-        button { background: #e94560; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #c73a50; }
-        .back-link { display: block; text-align: center; margin-top: 20px; color: #1a1a2e; text-decoration: none; }
-        .saved { color: green; font-weight: bold; margin-top: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .match-card { background: #1e1e1e; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: center; }
+        .team { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .team img { width: 50px; height: 35px; border-radius: 4px; margin-bottom: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .versus { font-weight: bold; color: #ffcc00; font-size: 1.2rem; padding: 0 10px; }
+        .score-input { width: 60px; padding: 8px; font-size: 1.2rem; text-align: center; border-radius: 6px; border: 1px solid #333; background: #2a2a2a; color: #fff; margin-top: 5px; }
+        .match-info { font-size: 0.85rem; color: #aaa; margin-top: 5px; }
+        .btn-save { background: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 1rem; border-radius: 6px; cursor: pointer; transition: 0.3s; margin-top: 10px; font-weight: bold;}
+        .btn-save:hover { background: #219150; }
+        .btn-save:disabled { background: #555; color: #888; cursor: not-allowed; }
+        .locked-msg { color: #e74c3c; font-size: 0.9rem; font-weight: bold; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>📊 توقع نتائج المباريات</h1>
-        <p>أدخل توقعاتك لكل مباراة</p>
+    <div class="container">
+        <h1>🔮 توقع مباريات كأس العالم 2026</h1>
+        <p>ملاحظة: يقفل التوقع تلقائياً قبل انطلاق المباراة بـ 5 دقائق!</p>
+        
+        <div id="matches-list">
+            <!-- المباريات بتنزل هنا تلقائياً بالجافاسكريبت -->
+        </div>
     </div>
 
-    <div id="matches-container">
-        <p>جاري تحميل المباريات...</p>
-    </div>
-
-    <a href="home.html" class="back-link">⬅ الرجوع للرئيسية</a>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
-
+    <!-- استدعاء ملف جدول المباريات الثابت من الجيت هب -->
+    <script src="matches.js"></script>
+    
     <script>
-        let currentUser = null;
-
-        firebase.auth().onAuthStateChanged((user) => {
-            if (!user) {
-                window.location.href = 'index.html';
+        document.addEventListener("DOMContentLoaded", () => {
+            const listContainer = document.getElementById("matches-list");
+            
+            if (typeof matches === 'undefined' || matches.length === 0) {
+                listContainer.innerHTML = "<p>⚠️ لم يتم العثور على جدول المباريات، تأكد من وجود ملف matches.js</p>";
                 return;
             }
-            currentUser = user;
-            loadMatches();
+
+            // قراءة التوقعات المحفوظة مسبقاً بجهاز المستخدم
+            const savedPredictions = JSON.parse(localStorage.getItem("user_predictions")) || {};
+
+            matches.forEach(match => {
+                const isOpen = isPredictionOpen(match.matchTime);
+                const matchDate = new Date(match.matchTime).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'numeric' });
+                
+                // جلب التوقع القديم إن وجد
+                const pred = savedPredictions[match.id] || { home: "", away: "" };
+
+                const card = document.createElement("div");
+                card.className = "match-card";
+                card.innerHTML = `
+                    <div class="team">
+                        <img src="https://flagcdn.com/w80/${match.team1Code}.png" alt="${match.team1}">
+                        <span>${match.team1}</span>
+                        <input type="number" min="0" class="score-input" id="home-${match.id}" value="${pred.home}" ${!isOpen ? 'disabled' : ''}>
+                    </div>
+                    
+                    <div class="versus">
+                        VS
+                        <div class="match-info">${matchDate}</div>
+                        ${!isOpen ? '<div class="locked-msg">🔒 انتهى الوقت</div>' : ''}
+                    </div>
+                    
+                    <div class="team">
+                        <img src="https://flagcdn.com/w80/${match.team2Code}.png" alt="${match.team2}">
+                        <span>${match.team2}</span>
+                        <input type="number" min="0" class="score-input" id="away-${match.id}" value="${pred.away}" ${!isOpen ? 'disabled' : ''}>
+                    </div>
+                `;
+
+                if (isOpen) {
+                    const saveBtn = document.createElement("button");
+                    saveBtn.className = "btn-save";
+                    saveBtn.innerText = "حفظ التوقع 💾";
+                    saveBtn.onclick = () => saveMatchPrediction(match.id);
+                    card.appendChild(saveBtn);
+                }
+
+                listContainer.appendChild(card);
+            });
         });
 
-        function loadMatches() {
-            const container = document.getElementById('matches-container');
-            
-            firebase.firestore().collection('matches').orderBy('round').get()
-                .then((snapshot) => {
-                    if (snapshot.empty) {
-                        container.innerHTML = '<p>لا توجد مباريات حالياً</p>';
-                        return;
-                    }
+        // دالة حفظ التوقع في ذاكرة الجهاز المحلية
+        function saveMatchPrediction(matchId) {
+            const homeScore = document.getElementById(`home-${matchId}`).value;
+            const awayScore = document.getElementById(`away-${matchId}`).value;
 
-                    container.innerHTML = '';
-                    snapshot.forEach((doc) => {
-                        const match = doc.data();
-                        const matchDiv = document.createElement('div');
-                        matchDiv.className = 'match-card';
-                        matchDiv.innerHTML = `
-                            <h3>الجولة ${match.round}</h3>
-                            <div class="teams">
-                                <span>${match.team1}</span>
-                                <span>VS</span>
-                                <span>${match.team2}</span>
-                            </div>
-                            <div class="score-input">
-                                <input type="number" id="home-${doc.id}" min="0" max="99" placeholder="0">
-                                <span>-</span>
-                                <input type="number" id="away-${doc.id}" min="0" max="99" placeholder="0">
-                            </div>
-                            <button onclick="savePrediction('${doc.id}')">حفظ التوقع</button>
-                            <p class="saved" id="msg-${doc.id}"></p>
-                        `;
-                        container.appendChild(matchDiv);
+            if (homeScore === "" || awayScore === "") {
+                alert("الرجاء إدخال الأهداف أولاً!");
+                return;
+            }
 
-                        loadExistingPrediction(doc.id);
-                    });
-                })
-                .catch((error) => {
-                    container.innerHTML = '<p>خطأ في تحميل المباريات</p>';
-                    console.error(error);
-                });
-        }
-
-        function loadExistingPrediction(matchId) {
-            if (!currentUser) return;
-
-            firebase.firestore().collection('predictions')
-                .where('userId', '==', currentUser.uid)
-                .where('matchId', '==', matchId)
-                .get()
-                .then((snapshot) => {
-                    if (!snapshot.empty) {
-                        const pred = snapshot.docs[0].data();
-                        document.getElementById(`home-${matchId}`).value = pred.homeScore;
-                        document.getElementById(`away-${matchId}`).value = pred.awayScore;
-                    }
-                });
-        }
-
-        function savePrediction(matchId) {
-            const homeScore = parseInt(document.getElementById(`home-${matchId}`).value) || 0;
-            const awayScore = parseInt(document.getElementById(`away-${matchId}`).value) || 0;
-
-            if (!currentUser) return;
-
-            const predictionData = {
-                userId: currentUser.uid,
-                matchId: matchId,
-                homeScore: homeScore,
-                awayScore: awayScore,
-                timestamp: new Date()
+            // جلب القائمة الكاملة وتحديثها
+            const allPredictions = JSON.parse(localStorage.getItem("user_predictions")) || {};
+            allPredictions[matchId] = {
+                home: homeScore,
+                away: awayScore
             };
 
-            firebase.firestore().collection('predictions')
-                .where('userId', '==', currentUser.uid)
-                .where('matchId', '==', matchId)
-                .get()
-                .then((snapshot) => {
-                    if (snapshot.empty) {
-                        return firebase.firestore().collection('predictions').add(predictionData);
-                    } else {
-                        return firebase.firestore().collection('predictions').doc(snapshot.docs[0].id).update(predictionData);
-                    }
-                })
-                .then(() => {
-                    document.getElementById(`msg-${matchId}`).textContent = '✅ تم حفظ التوقع!';
-                })
-                .catch((error) => {
-                    document.getElementById(`msg-${matchId}`).textContent = '❌ خطأ في الحفظ';
-                    console.error(error);
-                });
+            localStorage.setItem("user_predictions", JSON.stringify(allPredictions));
+            alert("🎯 تم حفظ توقعك بنجاح في جهازك!");
         }
     </script>
-
 </body>
 </html>
