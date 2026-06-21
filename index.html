@@ -3,28 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقعات كأس العالم</title>
+    <title>إنشاء حساب</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f0f0; text-align: center; padding: 20px; }
-        .header { background: #1a1a2e; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-        .header h1 { font-size: 28px; color: #e94560; }
-        .menu { display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto; }
-        .menu a { background: #16213e; color: white; padding: 15px; border-radius: 8px; text-decoration: none; font-size: 18px; }
-        .menu a:hover { background: #e94560; }
+        .container { max-width: 350px; margin: 50px auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { color: #1a1a2e; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: #e94560; color: white; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; }
+        button:hover { background: #c73a50; }
+        a { color: #1a1a2e; text-decoration: none; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>🏆 توقعات كأس العالم 2026</h1>
-        <p>توقع نتائج المباريات واربح نقاط</p>
+    <div class="container">
+        <h2>📝 إنشاء حساب</h2>
+        <input type="text" id="username" placeholder="اسم المستخدم">
+        <input type="email" id="email" placeholder="البريد الإلكتروني">
+        <input type="password" id="password" placeholder="كلمة المرور">
+        <button onclick="register()">إنشاء حساب</button>
+        <br><br>
+        <a href="login.html">عندي حساب - تسجيل دخول</a>
     </div>
 
-    <div class="menu">
-        <a href="register.html">📝 إنشاء حساب جديد</a>
-        <a href="login.html">🔑 تسجيل الدخول</a>
-    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        function register() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return firebase.firestore().collection('users').doc(user.uid).set({
+                        username: username,
+                        email: email,
+                        totalPoints: 0,
+                        createdAt: new Date()
+                    });
+                })
+                .then(() => {
+                    alert('تم إنشاء الحساب بنجاح!');
+                    window.location.href = 'home.html';
+                })
+                .catch((error) => {
+                    alert('خطأ: ' + error.message);
+                });
+        }
+    </script>
 
 </body>
 </html>
