@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة المتصدرين</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+        .header { background: #1a1a2e; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .header h1 { color: #e94560; font-size: 24px; }
+        table { width: 100%; max-width: 500px; margin: 0 auto; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th { background: #16213e; color: white; padding: 12px; font-size: 16px; }
+        td { padding: 12px; text-align: center; border-bottom: 1px solid #eee; }
+        tr:hover td { background: #f5f5f5; }
+        .gold { color: #ffd700; font-weight: bold; }
+        .silver { color: #c0c0c0; font-weight: bold; }
+        .bronze { color: #cd7f32; font-weight: bold; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #1a1a2e; text-decoration: none; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏅 لوحة المتصدرين</h1>
+        <p>أفضل المتنبئين</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>المركز</th>
+                <th>المستخدم</th>
+                <th>النقاط</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+            <tr>
+                <td colspan="3">جاري التحميل...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="home.html" class="back-link">⬅ الرجوع للرئيسية</a>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        firebase.auth().onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            loadLeaderboard();
+        });
+
+        function loadLeaderboard() {
+            const tbody = document.getElementById('leaderboard-body');
+
+            firebase.firestore().collection('users')
+                .orderBy('totalPoints', 'desc')
+                .limit(50)
+                .get()
+                .then((snapshot) => {
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="3">لا يوجد مستخدمين بعد</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = '';
+                    let rank = 1;
+                    snapshot.forEach((doc) => {
+                        const user = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        let rankClass = '';
+                        if (rank === 1) rankClass = 'gold';
+                        else if (rank === 2) rankClass = 'silver';
+                        else if (rank === 3) rankClass = 'bronze';
+                        
+                        row.innerHTML = `
+                            <td class="${rankClass}">${rank}</td>
+                            <td>${user.username}</td>
+                            <td>${user.totalPoints || 0}</td>
+                        `;
+                        tbody.appendChild(row);
+                        rank++;
+                    });
+                })
+                .catch((error) => {
+                    tbody.innerHTML = '<tr><td colspan="3">خطأ في التحميل</td></tr>';
+                    console.error(error);
+                });
+        }
+    </script>
+
+</body>
+</html>
